@@ -80,16 +80,17 @@ func main() {
 }
 ```
 
-# Library
+# About Library used
+```
 periph.io/x/conn/v3/driver/driverreg  
 periph.io/x/conn/v3/gpio  
 periph.io/x/conn/v3/physic  
 periph.io/x/conn/v3/spi  
 periph.io/x/conn/v3/spi/spireg  
-periph.io/x/host/v3  
-
+periph.io/x/host/v3
+```
 Thanks!  
-Library for more infomation https://periph.io/
+Library for more infomation [periph.io](https://periph.io/)
 
 # Discord
 If you can speak Japanese, I created this [Discord server](https://discord.gg/r2q4q8R5b8), join us!
