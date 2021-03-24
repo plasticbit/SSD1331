@@ -45,7 +45,7 @@ var testPattern = [6]pattColor{
 func main() {
 	display := &OLED.SSD1331{
 		Name:      "/dev/spidev0.0",
-		Frequency: 10 * physic.MegaHertz,
+		Frequency: 8 * physic.MegaHertz,
 		ResetPin:  rpi.P1_22,
 		DCPin:     rpi.P1_18,
 		CSPin:     rpi.P1_24,
