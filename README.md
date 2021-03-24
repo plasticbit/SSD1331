@@ -90,7 +90,7 @@ periph.io/x/conn/v3/spi/spireg
 periph.io/x/host/v3
 ```
 Thanks!  
-Library for more infomation [periph.io](https://periph.io/).
+Library for more information [periph.io](https://periph.io/) and GitHub repository [github.com/google/periph](https://github.com/google/periph).
 
 # Discord
 If you can speak Japanese, I created this [Discord server](https://discord.gg/r2q4q8R5b8), join us!
