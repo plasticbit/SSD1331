@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	OLED "github.com/BinaryDolphin29/SSD1331"
@@ -59,7 +58,4 @@ func main() {
 	}
 
 	display.Display()
-
-	display.ActiveScroll(0, 0, 63, 10, OLED.Frame100)
-	fmt.Println(display.Status)
 }
