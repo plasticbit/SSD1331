@@ -1,7 +1,8 @@
 package main
 
 import (
-    "log"
+	"fmt"
+	"log"
 
 	OLED "github.com/BinaryDolphin29/SSD1331"
 	"periph.io/x/conn/v3/physic"
@@ -26,7 +27,7 @@ var testPattern = [6]pattColor{
 func main() {
 	display := &OLED.SSD1331{
 		Name:      "/dev/spidev0.0",
-		Frequency: 10 * physic.MegaHertz,
+		Frequency: 8 * physic.MegaHertz,
 		ResetPin:  rpi.P1_22,
 		DCPin:     rpi.P1_18,
 		CSPin:     rpi.P1_24,
@@ -36,7 +37,7 @@ func main() {
 		log.Fatalln(err.Error())
 	}
 
-    width, height := display.Resolution()
+	width, height := display.Resolution()
 
 	defer display.Close()
 	display.ClearDisplay()
@@ -57,5 +58,8 @@ func main() {
 		maxX += rowSize
 	}
 
-    display.Display()
+	display.Display()
+
+	display.ActiveScroll(0, 0, 63, 10, OLED.Frame100)
+	fmt.Println(display.Status)
 }

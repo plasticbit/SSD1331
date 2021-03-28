@@ -1,7 +1,6 @@
 package OLED
 
 import (
-	"io"
 	"time"
 
 	"periph.io/x/conn/v3/driver/driverreg"
@@ -10,24 +9,6 @@ import (
 	"periph.io/x/conn/v3/spi"
 	"periph.io/x/conn/v3/spi/spireg"
 	"periph.io/x/host/v3"
-)
-
-type ScrollStep byte
-
-const (
-	Frames6 ScrollStep = iota
-	Frame10
-	Frame100
-	Frame200
-)
-
-type DisplayMode byte
-
-const (
-	Nomal DisplayMode = iota + 0xA4
-	EntireON
-	EntireOFF
-	Inverse
 )
 
 const (
@@ -48,10 +29,54 @@ type SSD1331 struct {
 	CSPin     gpio.PinOut
 
 	connect spi.Conn
-	clorser io.Closer
+	clorser spi.PortCloser
 
-	display bool
-	buffer  []byte
+	Status DisplayStatus
+	buffer []byte
+}
+
+type DisplayOnOff byte
+
+const (
+	DisplayOnInDim DisplayOnOff = iota + 0xAC
+	DisplayOff
+	DisplayON
+)
+
+type DisplayMode byte
+
+const (
+	Nomal DisplayMode = iota + 0xA4
+	EntireON
+	EntireOFF
+	Inverse
+)
+
+type ScrollStep byte
+
+const (
+	Frames6 ScrollStep = iota
+	Frames10
+	Frames100
+	Frames200
+)
+
+type DisplayStatus struct {
+	Mode    DisplayMode
+	Display DisplayOnOff
+	Scroll  struct {
+		IsScroll bool
+		Step     ScrollStep
+	}
+}
+
+func (s DisplayOnOff) IsTurnOn() bool {
+	switch s {
+	case DisplayON, DisplayOnInDim:
+		return true
+	}
+
+	return false
 }
 
 // Init Initialize oled.
@@ -70,7 +95,7 @@ func (oled *SSD1331) Init() error {
 		return err
 	}
 
-	oled.clorser = p.(io.Closer)
+	oled.clorser = p
 
 	c, err := p.Connect(oled.Frequency, spi.Mode3, 8)
 	if err != nil {
@@ -81,39 +106,31 @@ func (oled *SSD1331) Init() error {
 
 	oled.CSPin.Out(low)
 	oled.ResetPin.Out(low)
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(3000) // 3 us
 	oled.ResetPin.Out(high)
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(3000) // 3 us
 
-	// send initial commands
+	// Send initial commands
 	oled.sendCommand([]byte{
 		0xAE,             // display off
 		0x15, 0x00, 0x5F, // column addr
 		0x75, 0x00, 0x3F, // column addr
-		// 0x81, 0x91,
-		// 0x82, 0x50,
-		// 0x83, 0x7D,
-		0x87, 0x0A, // master current
-		// 0x8A, 0x64,
-		// 0x8B, 0x78,
-		// 0x8C, 0x64,
-
-		0xA0, 0x78, // remap, color depth setting
-		0xA1, 0x00,
-		0xA2, 0x00,
-		0xA4,
-		0xA8, 0x3F,
-		0xAD, 0x8E,
-		0xB0, 0x0B,
-		0xB1, 0x31,
-		0xB3, 0xF0,
-		0xBB, 0x3A,
-		0xBE, 0x3E,
-		0x87, 0x06,
+		0x87, 0x07, // master current
+		0xA0, 0x70, // remap, color depth setting
+		0xA1, 0x00, // set display start line by row
+		0xA2, 0x00, // set v offset by com
+		0xA4,       // normal
+		0xA8, 0x3F, // multiplex ratio
+		0xAD, 0x8E, // master configuration
+		0xB0, 0x0B, // power save mode, How many save current???
+		0xB1, 0x31, // phase 1 and 2 period adjustment
+		0xB3, 0xF0, // display clock div, oscillator freq
+		0xBB, 0x3E, // pre-charge voltage
+		0xBE, 0x3E, // set VCOMH
 		0xAF, // display on
 	})
 
-	oled.display = true
+	oled.Status = DisplayStatus{Nomal, DisplayON, oled.Status.Scroll}
 	oled.buffer = make([]byte, bufferLen)
 
 	return nil
@@ -121,6 +138,7 @@ func (oled *SSD1331) Init() error {
 
 // Close Close the port.
 func (oled *SSD1331) Close() error {
+	// oled.DisplayOff()
 	return oled.clorser.Close()
 }
 
@@ -129,27 +147,27 @@ func (oled SSD1331) Resolution() (int, int) {
 	return width, height
 }
 
-// IsDisplay Whether the OLED is display.
-func (oled *SSD1331) IsDisplay() bool {
-	return oled.display
-}
+// // IsDisplay Whether the OLED is display.
+// func (oled *SSD1331) IsDisplay() bool {
+// 	return oled.display
+// }
 
 // DisplayOn Turn on the OLED.
 func (oled *SSD1331) DisplayOn() {
 	oled.sendCommand([]byte{0xAF})
-	oled.display = true
+	oled.Status.Display = DisplayON
 }
 
 // DisplayOnDim Turn on the OLED in dim mode.
 func (oled *SSD1331) DisplayOnDim() {
 	oled.sendCommand([]byte{0xAC})
-	oled.display = true
+	oled.Status.Display = DisplayOnInDim
 }
 
 // DisplayOff Turn off the OLED.
 func (oled *SSD1331) DisplayOff() {
 	oled.sendCommand([]byte{0xAE})
-	oled.display = false
+	oled.Status.Display = DisplayOff
 }
 
 // SettingDimMode Configure dim mode setting
@@ -161,6 +179,7 @@ func (oled *SSD1331) SettingDimMode(r, g, b, preChargeVoltage byte) {
 // SetDisplayMode Change the display mode.
 func (oled *SSD1331) SetDisplayMode(mode DisplayMode) {
 	oled.sendCommand([]byte{byte(mode)})
+	oled.Status.Mode = mode
 }
 
 // SetRGBContrast value <= 128. a little unstable...
@@ -259,21 +278,25 @@ func (oled *SSD1331) ActiveScroll(horScrlOffset, startRowAddr, horRowScrl, verSc
 		0x27, horRowScrl, startRowAddr, horRowScrl, verScrlOffset, byte(scrlInterval),
 		0x2F,
 	})
+
+	oled.Status.Scroll.IsScroll = true
+	oled.Status.Scroll.Step = scrlInterval
 }
 
 // DeactiveScrool If Scrool function is Active then stop the scrool.
 func (oled *SSD1331) DeactiveScrool() {
 	oled.sendCommand([]byte{0x2E})
+	oled.Status.Scroll.IsScroll = false
 }
 
-// LOCK IMC interface will no longer accept commands.
+// LOCK MCU interface will no longer accept commands.
 func (oled *SSD1331) LOCK() {
-	oled.sendCommand([]byte{0xFD, 0x1B})
+	oled.sendCommand([]byte{0xFD, 0x16})
 }
 
 // UNLOCK Unlock the LOCK function.
 func (oled *SSD1331) UNLOCK() {
-	oled.sendCommand([]byte{0xFD, 0x0B})
+	oled.sendCommand([]byte{0xFD, 0x12})
 
 }
 
