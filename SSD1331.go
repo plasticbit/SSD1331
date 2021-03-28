@@ -116,7 +116,7 @@ func (oled *SSD1331) Init() error {
 		0x15, 0x00, 0x5F, // column addr
 		0x75, 0x00, 0x3F, // column addr
 		0x87, 0x07, // master current
-		0xA0, 0x78, // remap, color depth setting
+		0xA0, 0x72, // remap, color depth setting
 		0xA1, 0x00, // set display start line by row
 		0xA2, 0x00, // set v offset by com
 		0xA4,       // normal
