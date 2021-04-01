@@ -26,7 +26,7 @@ type SSD1331 struct {
 	Frequency physic.Frequency
 	ResetPin  gpio.PinIO
 	DCPin     gpio.PinIO
-	CSPin     gpio.PinOut
+	CSPin     gpio.PinIO
 
 	connect spi.Conn
 	clorser spi.PortCloser
@@ -68,6 +68,7 @@ type DisplayStatus struct {
 		IsScroll bool
 		Step     ScrollStep
 	}
+	LOCKED bool
 }
 
 func (s DisplayOnOff) IsTurnOn() bool {
@@ -130,7 +131,7 @@ func (oled *SSD1331) Init() error {
 		0xAF, // display on
 	})
 
-	oled.Status = DisplayStatus{Nomal, DisplayON, oled.Status.Scroll}
+	oled.Status = DisplayStatus{Nomal, DisplayON, oled.Status.Scroll, false}
 	oled.buffer = make([]byte, bufferLen)
 
 	return nil
@@ -146,11 +147,6 @@ func (oled *SSD1331) Close() error {
 func (oled SSD1331) Resolution() (int, int) {
 	return width, height
 }
-
-// // IsDisplay Whether the OLED is display.
-// func (oled *SSD1331) IsDisplay() bool {
-// 	return oled.display
-// }
 
 // DisplayOn Turn on the OLED.
 func (oled *SSD1331) DisplayOn() {
@@ -182,7 +178,7 @@ func (oled *SSD1331) SetDisplayMode(mode DisplayMode) {
 	oled.Status.Mode = mode
 }
 
-// SetRGBContrast value <= 128. a little unstable...
+// SetRGBContrast value <= 128.
 func (oled *SSD1331) SetRGBContrast(r, g, b byte) {
 	oled.sendCommand([]byte{0x81, r, 0x82, g, 0x83})
 
@@ -198,10 +194,19 @@ func (oled *SSD1331) Clear() {
 	oled.buffer = make([]byte, bufferLen)
 }
 
-// ClearDisplay Clear the display.
+// ClearDisplay Clear the buffer then apply display.
 func (oled *SSD1331) ClearDisplay() {
 	oled.Clear()
 	oled.Display()
+}
+
+// Fill Fill the display buffer.
+func (oled *SSD1331) Fill(r, g, b int) {
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			oled.SetPixel(x, y, r, g, b)
+		}
+	}
 }
 
 // DrawRect Draw a rectangle to the OLED.
@@ -292,12 +297,13 @@ func (oled *SSD1331) DeactiveScrool() {
 // LOCK MCU interface will no longer accept commands.
 func (oled *SSD1331) LOCK() {
 	oled.sendCommand([]byte{0xFD, 0x16})
+	oled.Status.LOCKED = true
 }
 
 // UNLOCK Unlock the LOCK function.
 func (oled *SSD1331) UNLOCK() {
 	oled.sendCommand([]byte{0xFD, 0x12})
-
+	oled.Status.LOCKED = false
 }
 
 func (oled *SSD1331) sendCommand(b []byte) {
