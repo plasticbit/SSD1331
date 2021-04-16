@@ -20,7 +20,7 @@ go get github.com/BinaryDolphin29/SSD1331
 package main
 
 import (
-    "log"
+	"log"
 
 	OLED "github.com/BinaryDolphin29/SSD1331"
 	"periph.io/x/conn/v3/physic"
@@ -55,7 +55,7 @@ func main() {
 		log.Fatalln(err.Error())
 	}
 
-    width, height := display.Resolution()
+	width, height := display.Resolution()
 
 	defer display.Close()
 	display.ClearDisplay()
@@ -76,7 +76,7 @@ func main() {
 		maxX += rowSize
 	}
 
-    display.Display()
+	display.Display()
 }
 ```
 
