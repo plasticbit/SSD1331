@@ -12,7 +12,7 @@ type pattColor struct {
 	R, G, B int
 }
 
-const max75 int = (2<<7)*0.75 - 1
+const max75 int = ((2 << 7) * 0.75) - 1
 
 var testPattern = [6]pattColor{
 	{max75, max75, max75}, // white

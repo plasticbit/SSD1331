@@ -1,6 +1,7 @@
 package OLED
 
 import (
+	"image"
 	"sync"
 	"time"
 
@@ -147,7 +148,7 @@ func (oled *SSD1331) Close() error {
 }
 
 // Resolution Returns the resolution of OLED.
-func (oled SSD1331) Resolution() (int, int) {
+func (oled *SSD1331) Resolution() (int, int) {
 	return width, height
 }
 
@@ -272,6 +273,19 @@ func (oled *SSD1331) SetPixel(x, y, r, g, b int) {
 
 	oled.buffer[startIDX] = byte(colorH)
 	oled.buffer[startIDX+1] = byte(colorL)
+}
+
+// SetImage Set the image pixels to buffer. Support resolutions are display width and height.
+func (oled *SSD1331) SetImage(img image.Image) {
+	bounds := img.Bounds()
+
+	for y := 0; y < bounds.Max.Y; y++ {
+		for x := 0; x < bounds.Max.X; x++ {
+			r, g, b, _ := img.At(x, y).RGBA()
+
+			oled.SetPixel(x, y, int(r>>8), int(g>>8), int(b>>8))
+		}
+	}
 }
 
 // ActiveScroll Scrool the display.
