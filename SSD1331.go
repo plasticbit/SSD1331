@@ -1,6 +1,7 @@
 package OLED
 
 import (
+	"sync"
 	"time"
 
 	"periph.io/x/conn/v3/driver/driverreg"
@@ -33,6 +34,7 @@ type SSD1331 struct {
 
 	Status DisplayStatus
 	buffer []byte
+	m      sync.Mutex
 }
 
 type DisplayOnOff byte
@@ -110,6 +112,7 @@ func (oled *SSD1331) Init() error {
 	time.Sleep(3000) // 3 us
 	oled.ResetPin.Out(high)
 	time.Sleep(3000) // 3 us
+	time.Sleep(100 * time.Millisecond)
 
 	// Send initial commands
 	oled.sendCommand([]byte{
@@ -307,6 +310,9 @@ func (oled *SSD1331) UNLOCK() {
 }
 
 func (oled *SSD1331) sendCommand(b []byte) {
+	oled.m.Lock()
+	defer oled.m.Unlock()
+
 	oled.CSPin.Out(low)
 	oled.DCPin.Out(low)
 	oled.connect.Tx(b, nil)
@@ -314,6 +320,9 @@ func (oled *SSD1331) sendCommand(b []byte) {
 }
 
 func (oled *SSD1331) sendDate(b []byte) {
+	oled.m.Lock()
+	defer oled.m.Unlock()
+
 	oled.CSPin.Out(low)
 	oled.DCPin.Out(high)
 	oled.connect.Tx(b, nil)
