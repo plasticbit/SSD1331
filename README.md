@@ -1,11 +1,12 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/BinaryDolphin29/SSD1331.svg)](https://pkg.go.dev/github.com/BinaryDolphin29/SSD1331)
 # SSD1331
-This library is a SSD1331 driver for Raspberry Pi 4.
+This library is a SSD1331 driver for Raspberry Pi 4.  
 See a Document at https://pkg.go.dev/github.com/BinaryDolphin29/SSD1331  
 [![Test Pattern](https://github.com/BinaryDolphin29/SSD1331/blob/master/image/image.JPG)](https://github.com/BinaryDolphin29/SSD1331/tree/master/example/testPattern)
 
 # Stable??
-no...this library is wrote by begginer. **So I can't take any responsibility.**
+No...This library is Written by begginer.  
+**So I can't take any responsibility.**
 
 # Hardware
 I use this OLED module https://akizukidenshi.com/catalog/g/gP-14435/, and Raspberry Pi 4(Raspbian Lite 32bit). I tested only these device.
