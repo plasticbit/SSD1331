@@ -14,6 +14,12 @@ I use this OLED module https://akizukidenshi.com/catalog/g/gP-14435/, and Raspbe
 ```
 go get github.com/BinaryDolphin29/SSD1331
 ```
+And you need to append 👇  
+```txt
+spidev.bufsiz=65536
+```
+to the `/boot/cmdline.txt`.  
+It is raises the SPI buffer limit(Must be 16 bits or higher)
 
 # Example
 ```go
