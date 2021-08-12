@@ -23,6 +23,15 @@ to the `/boot/cmdline.txt`.
 It is raises the SPI buffer limit(Must be 16 bits or higher)
 
 # Example
+```
+GND -> GND
+VCC -> 5V
+SCL -> GPIO 11
+SDA -> GPIO 10
+RES -> GPIO 25
+DC  -> GPIO 24
+CS  -> GPIO 8
+```
 ```go
 package main
 
