@@ -2,7 +2,8 @@ package OLED
 
 import (
 	"image"
-	"sync"
+	"io"
+	"math"
 	"time"
 
 	"periph.io/x/conn/v3/driver/driverreg"
@@ -28,22 +29,20 @@ type SSD1331 struct {
 	Frequency physic.Frequency
 	ResetPin  gpio.PinIO
 	DCPin     gpio.PinIO
-	CSPin     gpio.PinIO
 
 	connect spi.Conn
 	clorser spi.PortCloser
 
 	Status DisplayStatus
 	buffer []byte
-	m      sync.Mutex
 }
 
 type DisplayOnOff byte
 
 const (
-	DisplayOnInDim DisplayOnOff = iota + 0xAC
-	DisplayOff
-	DisplayON
+	DisplayOnInDim DisplayOnOff = 0xAC
+	DisplayOff     DisplayOnOff = 0xAE
+	DisplayON      DisplayOnOff = 0xAF
 )
 
 type DisplayMode byte
@@ -83,6 +82,15 @@ func (s DisplayOnOff) IsTurnOn() bool {
 	return false
 }
 
+// 7.4, 7.9 in Datasheeets.
+func (oled *SSD1331) reset() {
+	oled.ResetPin.Out(low)
+	time.Sleep(5 * time.Microsecond)
+	oled.ResetPin.Out(high)
+	time.Sleep(5 * time.Microsecond)
+	time.Sleep(150 * time.Millisecond)
+}
+
 // Init Initialize oled.
 func (oled *SSD1331) Init() error {
 	_, err := host.Init()
@@ -108,20 +116,16 @@ func (oled *SSD1331) Init() error {
 
 	oled.connect = c
 
-	oled.CSPin.Out(low)
-	oled.ResetPin.Out(low)
-	time.Sleep(3000) // 3 us
-	oled.ResetPin.Out(high)
-	time.Sleep(3000) // 3 us
-	time.Sleep(100 * time.Millisecond)
+	// Reset the oled.
+	oled.reset()
 
-	// Send initial commands
+	// Send initial commands.
 	oled.sendCommand([]byte{
 		0xAE,             // display off
 		0x15, 0x00, 0x5F, // column addr
 		0x75, 0x00, 0x3F, // column addr
 		0x87, 0x07, // master current
-		0xA0, 0x72, // remap, color depth setting
+		0xA0, 0x72, // remap, color depth setting (65k color)
 		0xA1, 0x00, // set display start line by row
 		0xA2, 0x00, // set v offset by com
 		0xA4,       // normal
@@ -150,6 +154,11 @@ func (oled *SSD1331) Close() error {
 // Resolution Returns the resolution of OLED.
 func (oled *SSD1331) Resolution() (int, int) {
 	return width, height
+}
+
+// Buffer Raw buffer.
+func (oled *SSD1331) Buffer() *[]byte {
+	return &oled.buffer
 }
 
 // DisplayOn Turn on the OLED.
@@ -204,40 +213,14 @@ func (oled *SSD1331) ClearDisplay() {
 	oled.Display()
 }
 
-// Fill Fill the display buffer.
-func (oled *SSD1331) Fill(r, g, b int) {
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			oled.SetPixel(x, y, r, g, b)
-		}
-	}
-}
+// SetPixel Set the pixel in the buffer.
+func (oled *SSD1331) SetPixel(x, y, r, g, b int) {
+	startIDX := ((y * width) + x) * 2
+	colorH := (r & 0b11111000) | (g >> 5)
+	colorL := ((g << 3) & 0b11100000) | (b >> 3)
 
-// DrawRect Draw a rectangle to the OLED.
-func (oled *SSD1331) DrawRect(x0, y0, x1, y1, lineColorR, lineColorG, lineColorB, fillColorR, fillColorG, fillColorB int, fill bool) {
-	var f byte = 0xA1
-	if !fill {
-		f = 0xA0
-	}
-
-	oled.sendCommand([]byte{
-		0x26, f,
-		0x22, byte(x0), byte(y0), byte(x1), byte(y1),
-		byte(lineColorR), byte(lineColorG), byte(lineColorB),
-		byte(fillColorR), byte(fillColorG), byte(fillColorB),
-	})
-}
-
-func (oled *SSD1331) SetHLine(x, y, w, r, g, b int) {
-	for i := 0; i < w; i++ {
-		oled.SetPixel(x+i, y, r, g, b)
-	}
-}
-
-func (oled *SSD1331) SetVLine(x, y, h, r, g, b int) {
-	for i := 0; i < h; i++ {
-		oled.SetPixel(x, y+i, r, g, b)
-	}
+	oled.buffer[startIDX] = byte(colorH)
+	oled.buffer[startIDX+1] = byte(colorL)
 }
 
 // SetLine Write a line on the OLED.
@@ -265,14 +248,56 @@ func (oled *SSD1331) SetLine(x0, y0, x1, y1, r, g, b int) {
 	}
 }
 
-// SetPixel Set the pixel in the buffer.
-func (oled *SSD1331) SetPixel(x, y, r, g, b int) {
-	startIDX := ((y * width) + x) * 2
-	colorH := (r & 0b11111000) | (g >> 5)
-	colorL := ((g << 3) & 0b11100000) | (b >> 3)
+func (oled *SSD1331) SetVLine(x, y, h, r, g, b int) {
+	for i := 0; i < h; i++ {
+		oled.SetPixel(x, y+i, r, g, b)
+	}
+}
 
-	oled.buffer[startIDX] = byte(colorH)
-	oled.buffer[startIDX+1] = byte(colorL)
+func (oled *SSD1331) SetHLine(x, y, w, r, g, b int) {
+	for i := 0; i < w; i++ {
+		oled.SetPixel(x+i, y, r, g, b)
+	}
+}
+
+// DrawRect Draw a rectangle to the OLED.
+func (oled *SSD1331) DrawRect(x0, y0, x1, y1, lineColorR, lineColorG, lineColorB, fillColorR, fillColorG, fillColorB int, fill bool) {
+	var f byte = 0xA1
+	if !fill {
+		f = 0xA0
+	}
+
+	oled.sendCommand([]byte{
+		0x26, f,
+		0x22, byte(x0), byte(y0), byte(x1), byte(y1),
+		byte(lineColorR), byte(lineColorG), byte(lineColorB),
+		byte(fillColorR), byte(fillColorG), byte(fillColorB),
+	})
+}
+
+// DrawCircle Draw the circle.
+//
+// cx,xy Positions the circle.
+// r     Size of circle.
+// a     R color
+// b     G color
+// c     B color
+func (oled *SSD1331) DrawCircle(cx, cy, r, a, b, c int) {
+	for d := .0; d < 360.0; d++ {
+		x := cx + (r * int(math.Cos(d*math.Pi/180.0)))
+		y := cy + (r * int(math.Sin(d*math.Pi/180.0)))
+
+		oled.SetPixel(x, y, a, b, c)
+	}
+}
+
+// Fill Fill the display buffer.
+func (oled *SSD1331) Fill(r, g, b int) {
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			oled.SetPixel(x, y, r, g, b)
+		}
+	}
 }
 
 // SetImage Set the image pixels to buffer. Support resolutions are display width and height.
@@ -324,21 +349,11 @@ func (oled *SSD1331) UNLOCK() {
 }
 
 func (oled *SSD1331) sendCommand(b []byte) {
-	oled.m.Lock()
-	defer oled.m.Unlock()
-
-	oled.CSPin.Out(low)
 	oled.DCPin.Out(low)
-	oled.connect.Tx(b, nil)
-	oled.CSPin.Out(high)
+	oled.connect.(io.Writer).Write(b)
 }
 
 func (oled *SSD1331) sendDate(b []byte) {
-	oled.m.Lock()
-	defer oled.m.Unlock()
-
-	oled.CSPin.Out(low)
 	oled.DCPin.Out(high)
-	oled.connect.Tx(b, nil)
-	oled.CSPin.Out(high)
+	oled.connect.(io.Writer).Write(b)
 }
