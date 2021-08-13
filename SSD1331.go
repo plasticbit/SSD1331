@@ -282,10 +282,10 @@ func (oled *SSD1331) DrawRect(x0, y0, x1, y1, lineColorR, lineColorG, lineColorB
 // a     R color
 // b     G color
 // c     B color
-func (oled *SSD1331) DrawCircle(cx, cy, r, a, b, c int) {
+func (oled *SSD1331) SetCircle(cx, cy int, r float64, a, b, c int) {
 	for d := .0; d < 360.0; d++ {
-		x := cx + (r * int(math.Cos(d*math.Pi/180.0)))
-		y := cy + (r * int(math.Sin(d*math.Pi/180.0)))
+		x := int(float64(cx) + (r * math.Cos(d*math.Pi/180.0)))
+		y := int(float64(cy) + (r * math.Sin(d*math.Pi/180.0)))
 
 		oled.SetPixel(x, y, a, b, c)
 	}
