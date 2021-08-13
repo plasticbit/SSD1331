@@ -64,7 +64,6 @@ func main() {
 		Frequency: 8 * physic.MegaHertz,
 		ResetPin:  rpi.P1_22,
 		DCPin:     rpi.P1_18,
-		CSPin:     rpi.P1_24,
 	}
 
 	if err := display.Init(); err != nil {
