@@ -213,7 +213,7 @@ func (oled *SSD1331) ClearDisplay() {
 	oled.Display()
 }
 
-// GetPixel Get the pixel from the buffer.
+// GetPixel Get the pixel from the ""buffer"".
 func (oled *SSD1331) GetPixel(x, y int) uint16 {
 	idx := ((y * width) + x) * 2
 	most := oled.buffer[idx]
@@ -357,6 +357,11 @@ func (oled *SSD1331) LOCK() {
 func (oled *SSD1331) UNLOCK() {
 	oled.sendCommand([]byte{0xFD, 0x12})
 	oled.Status.LOCKED = false
+}
+
+func (oled *SSD1331) GetDate(b, r []byte) {
+	oled.DCPin.Out(high)
+	oled.connect.Tx(b, r)
 }
 
 func (oled *SSD1331) sendCommand(b []byte) {
