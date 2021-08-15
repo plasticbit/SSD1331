@@ -282,6 +282,8 @@ func (oled *SSD1331) DrawRect(x0, y0, x1, y1, lineColorR, lineColorG, lineColorB
 		byte(lineColorR), byte(lineColorG), byte(lineColorB),
 		byte(fillColorR), byte(fillColorG), byte(fillColorB),
 	})
+
+	time.Sleep(2 * time.Millisecond)
 }
 
 // DrawCircle Draw the circle.
