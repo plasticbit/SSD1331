@@ -213,6 +213,15 @@ func (oled *SSD1331) ClearDisplay() {
 	oled.Display()
 }
 
+// GetPixel Get the pixel from the buffer.
+func (oled *SSD1331) GetPixel(x, y int) uint16 {
+	idx := ((y * width) + x) * 2
+	most := oled.buffer[idx]
+	least := oled.buffer[idx+1]
+
+	return (uint16(most) << 8) | uint16(least)
+}
+
 // SetPixel Set the pixel in the buffer.
 func (oled *SSD1331) SetPixel(x, y, r, g, b int) {
 	startIDX := ((y * width) + x) * 2
