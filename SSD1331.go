@@ -359,11 +359,6 @@ func (oled *SSD1331) UNLOCK() {
 	oled.Status.LOCKED = false
 }
 
-func (oled *SSD1331) GetDate(b, r []byte) {
-	oled.DCPin.Out(high)
-	oled.connect.Tx(b, r)
-}
-
 func (oled *SSD1331) sendCommand(b []byte) {
 	oled.DCPin.Out(low)
 	oled.connect.(io.Writer).Write(b)
